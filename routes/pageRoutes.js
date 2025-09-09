@@ -232,4 +232,11 @@ router.get('/about', (req, res) => {
     });
 });
 
+// 文件上传演示页面
+router.get('/upload-demo', requireAuth, (req, res) => {
+    res.render('upload-demo', {
+        title: '文件上传演示'
+    });
+});
+
 module.exports = router;

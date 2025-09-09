@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传演示 - Express任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #007bff;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+        
+        .file-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        
+        .progress {
+            height: 8px;
+            margin: 10px 0;
+        }
+        
+        .file-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .chunk-progress {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .upload-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .api-demo {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .file-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            background: white;
+        }
+        
+        .file-preview {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .file-icon {
+            font-size: 60px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-cloud-upload"></i>
+                文件上传演示
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">
+                    <i class="bi bi-house"></i> 返回仪表盘
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="bi bi-cloud-upload"></i> 文件上传功能演示</h2>
+                <p class="text-muted">支持单文件、多文件、大文件分片上传，实时进度显示</p>
+            </div>
+        </div>
+
+        <!-- 功能选项卡 -->
+        <ul class="nav nav-tabs" id="uploadTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" 
+                        type="button" role="tab">基础上传</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="multiple-tab" data-bs-toggle="tab" data-bs-target="#multiple" 
+                        type="button" role="tab">多文件上传</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="chunk-tab" data-bs-toggle="tab" data-bs-target="#chunk" 
+                        type="button" role="tab">分片上传</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="files-tab" data-bs-toggle="tab" data-bs-target="#files" 
+                        type="button" role="tab">文件管理</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="api-tab" data-bs-toggle="tab" data-bs-target="#api" 
+                        type="button" role="tab">API文档</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="uploadTabsContent">
+            <!-- 基础上传 -->
+            <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                <div class="row mt-4">
+                    <!-- 头像上传 -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-person-circle"></i> 头像上传</h5>
+                                <small class="text-muted">专门用于用户头像，会覆盖现有头像</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="upload-area" id="avatarUploadArea">
+                                    <i class="bi bi-person-circle" style="font-size: 48px; color: #6c757d;"></i>
+                                    <h5 class="mt-3">上传头像</h5>
+                                    <p class="text-muted">建议图片格式，最大2MB</p>
+                                    <input type="file" id="avatarFileInput" class="d-none" accept="image/*">
+                                </div>
+                                
+                                <div id="avatarUploadList" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 单文件上传 -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-file-earmark-arrow-up"></i> 单文件上传</h5>
+                                <small class="text-muted">通用文件上传，支持所有格式</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="upload-area" id="singleUploadArea">
+                                    <i class="bi bi-file-earmark-arrow-up" style="font-size: 48px; color: #6c757d;"></i>
+                                    <h5 class="mt-3">选择文件上传</h5>
+                                    <p class="text-muted">支持几乎所有文件格式（最大100MB）</p>
+                                    <input type="file" id="singleFileInput" class="d-none">
+                                </div>
+                                
+                                <div id="singleUploadList" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- 上传方式对比 -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-table"></i> 上传方式对比</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>上传类型</th>
+                                                <th>API端点</th>
+                                                <th>Content-Type</th>
+                                                <th>字段名</th>
+                                                <th>存储目录</th>
+                                                <th>适用场景</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>头像上传</strong></td>
+                                                <td><code>POST /api/upload/avatar</code></td>
+                                                <td><code>multipart/form-data</code></td>
+                                                <td><code>avatar</code></td>
+                                                <td><code>/uploads/avatars/</code></td>
+                                                <td>用户头像，会替换现有头像（最大2MB）</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>单文件上传</strong></td>
+                                                <td><code>POST /api/upload/single</code></td>
+                                                <td><code>multipart/form-data</code></td>
+                                                <td><code>file</code></td>
+                                                <td><code>/uploads/files/</code></td>
+                                                <td>通用文件，不会覆盖（最大100MB）</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>多文件上传</strong></td>
+                                                <td><code>POST /api/upload/multiple</code></td>
+                                                <td><code>multipart/form-data</code></td>
+                                                <td><code>files[]</code></td>
+                                                <td><code>/uploads/files/</code></td>
+                                                <td>批量上传，同时处理多个文件（每个最大100MB）</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>分片上传</strong></td>
+                                                <td><code>POST /api/upload/chunk/*</code></td>
+                                                <td><code>application/json</code> + <code>multipart/form-data</code></td>
+                                                <td><code>chunk</code></td>
+                                                <td><code>/uploads/files/</code></td>
+                                                <td>大文件(>100MB)，支持断点续传</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h6><i class="bi bi-lightbulb"></i> 选择建议</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="bi bi-check-circle text-success"></i> <strong>文件 &lt; 10MB</strong>：使用单文件或多文件上传</li>
+                                        <li><i class="bi bi-check-circle text-success"></i> <strong>文件 10-100MB</strong>：建议使用单文件上传</li>
+                                        <li><i class="bi bi-check-circle text-success"></i> <strong>文件 &gt; 100MB</strong>：必须使用分片上传</li>
+                                        <li><i class="bi bi-check-circle text-success"></i> <strong>用户头像</strong>：专用头像上传接口</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 多文件上传 -->
+            <div class="tab-pane fade" id="multiple" role="tabpanel">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <h5><i class="bi bi-files"></i> 多文件批量上传</h5>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="selectMultipleFiles()">
+                                        <i class="bi bi-plus"></i> 添加文件
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="uploadAllFiles()" id="uploadAllBtn" disabled>
+                                        <i class="bi bi-cloud-upload"></i> 全部上传
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="upload-area" id="multipleUploadArea">
+                                    <i class="bi bi-files" style="font-size: 48px; color: #6c757d;"></i>
+                                    <h5 class="mt-3">拖拽多个文件到此处</h5>
+                                    <p class="text-muted">支持同时选择多个文件进行批量上传（每个文件最大100MB）</p>
+                                    <input type="file" id="multipleFileInput" class="d-none" multiple>
+                                </div>
+                                
+                                <div id="multipleUploadList" class="mt-3"></div>
+                                
+                                <div id="overallProgress" class="mt-3" style="display: none;">
+                                    <h6>总体进度</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" id="overallProgressBar"></div>
+                                    </div>
+                                    <small class="text-muted" id="overallProgressText"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分片上传 -->
+            <div class="tab-pane fade" id="chunk" role="tabpanel">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-pie-chart"></i> 大文件分片上传</h5>
+                                <small class="text-muted">适用于大文件上传，支持断点续传</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">分片大小</label>
+                                        <select class="form-select" id="chunkSize">
+                                            <option value="1048576">1 MB</option>
+                                            <option value="2097152" selected>2 MB</option>
+                                            <option value="5242880">5 MB</option>
+                                            <option value="10485760">10 MB</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">并发数</label>
+                                        <select class="form-select" id="concurrency">
+                                            <option value="1">1</option>
+                                            <option value="2" selected>2</option>
+                                            <option value="3">3</option>
+                                            <option value="5">5</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">操作</label>
+                                        <div>
+                                            <button class="btn btn-primary" onclick="selectChunkFile()">
+                                                <i class="bi bi-file-earmark"></i> 选择大文件
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <input type="file" id="chunkFileInput" class="d-none">
+                                <div id="chunkUploadList"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文件管理 -->
+            <div class="tab-pane fade" id="files" role="tabpanel">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <h5><i class="bi bi-folder"></i> 已上传文件</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="refreshFileList()">
+                                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="filesList" class="file-grid">
+                                    <!-- 文件列表将在这里动态加载 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API文档 -->
+            <div class="tab-pane fade" id="api" role="tabpanel">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="api-demo">
+                            <h5><i class="bi bi-code-square"></i> 文件上传 API 文档</h5>
+                            
+                            <h6 class="mt-4">1. 基础文件上传</h6>
+                            <div class="code-block">
+<span style="color: #66d9ef;">POST</span> /api/upload/avatar
+<span style="color: #66d9ef;">Content-Type:</span> multipart/form-data
+
+<span style="color: #75715e;">// JavaScript 示例</span>
+<span style="color: #f92672;">const</span> formData = <span style="color: #f92672;">new</span> FormData();
+formData.append(<span style="color: #e6db74;">'avatar'</span>, file);
+
+<span style="color: #f92672;">const</span> response = <span style="color: #f92672;">await</span> fetch(<span style="color: #e6db74;">'/api/upload/avatar'</span>, {
+  method: <span style="color: #e6db74;">'POST'</span>,
+  body: formData,
+  headers: {
+    <span style="color: #e6db74;">'X-Requested-With'</span>: <span style="color: #e6db74;">'XMLHttpRequest'</span>
+  }
+});
+                            </div>
+
+                            <h6 class="mt-4">2. 多文件上传</h6>
+                            <div class="code-block">
+<span style="color: #66d9ef;">POST</span> /api/upload/multiple
+<span style="color: #66d9ef;">Content-Type:</span> multipart/form-data
+
+<span style="color: #75715e;">// JavaScript 示例</span>
+<span style="color: #f92672;">const</span> formData = <span style="color: #f92672;">new</span> FormData();
+files.forEach((file, index) => {
+  formData.append(<span style="color: #e6db74;">`files[${index}]`</span>, file);
+});
+
+<span style="color: #f92672;">const</span> xhr = <span style="color: #f92672;">new</span> XMLHttpRequest();
+xhr.upload.onprogress = (e) => {
+  <span style="color: #f92672;">const</span> percent = (e.loaded / e.total) * 100;
+  console.log(<span style="color: #e6db74;">`上传进度: ${percent}%`</span>);
+};
+                            </div>
+
+                            <h6 class="mt-4">3. 分片上传</h6>
+                            <div class="code-block">
+<span style="color: #75715e;">// 初始化分片上传</span>
+<span style="color: #66d9ef;">POST</span> /api/upload/chunk/init
+{
+  <span style="color: #e6db74;">"filename"</span>: <span style="color: #e6db74;">"large-file.zip"</span>,
+  <span style="color: #e6db74;">"fileSize"</span>: 104857600,
+  <span style="color: #e6db74;">"chunkSize"</span>: 2097152
+}
+
+<span style="color: #75715e;">// 上传分片</span>
+<span style="color: #66d9ef;">POST</span> /api/upload/chunk/upload
+<span style="color: #66d9ef;">Content-Type:</span> multipart/form-data
+{
+  chunk: Blob,           <span style="color: #75715e;">// 分片数据</span>
+  uploadId: string,      <span style="color: #75715e;">// 上传ID</span>
+  chunkIndex: number,    <span style="color: #75715e;">// 分片索引</span>
+  totalChunks: number    <span style="color: #75715e;">// 总分片数</span>
+}
+
+<span style="color: #75715e;">// 合并分片</span>
+<span style="color: #66d9ef;">POST</span> /api/upload/chunk/merge
+{
+  <span style="color: #e6db74;">"uploadId"</span>: <span style="color: #e6db74;">"upload_123456"</span>,
+  <span style="color: #e6db74;">"filename"</span>: <span style="color: #e6db74;">"large-file.zip"</span>
+}
+                            </div>
+
+                            <h6 class="mt-4">4. 响应格式</h6>
+                            <div class="code-block">
+<span style="color: #75715e;">// 成功响应</span>
+{
+  <span style="color: #e6db74;">"success"</span>: <span style="color: #ae81ff;">true</span>,
+  <span style="color: #e6db74;">"message"</span>: <span style="color: #e6db74;">"上传成功"</span>,
+  <span style="color: #e6db74;">"data"</span>: {
+    <span style="color: #e6db74;">"filename"</span>: <span style="color: #e6db74;">"processed_filename.jpg"</span>,
+    <span style="color: #e6db74;">"originalName"</span>: <span style="color: #e6db74;">"original.jpg"</span>,
+    <span style="color: #e6db74;">"size"</span>: <span style="color: #ae81ff;">1024000</span>,
+    <span style="color: #e6db74;">"url"</span>: <span style="color: #e6db74;">"/uploads/files/processed_filename.jpg"</span>,
+    <span style="color: #e6db74;">"mimeType"</span>: <span style="color: #e6db74;">"image/jpeg"</span>
+  }
+}
+
+<span style="color: #75715e;">// 错误响应</span>
+{
+  <span style="color: #e6db74;">"success"</span>: <span style="color: #ae81ff;">false</span>,
+  <span style="color: #e6db74;">"error"</span>: <span style="color: #e6db74;">"文件类型不支持"</span>,
+  <span style="color: #e6db74;">"code"</span>: <span style="color: #e6db74;">"INVALID_FILE_TYPE"</span>
+}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文件预览模态框 -->
+    <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filePreviewModalLabel">文件预览</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center" id="filePreviewContent">
+                    <!-- 预览内容将动态插入这里 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <a href="#" class="btn btn-primary" id="downloadFileBtn" target="_blank">
+                        <i class="bi bi-download"></i> 下载文件
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 文件上传脚本 -->
+    <script src="/js/upload-demo.js"></script>
+</body>
+</html>
