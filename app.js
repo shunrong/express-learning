@@ -1,8 +1,12 @@
+// 首先加载环境变量
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
+const passport = require('./config/passport');
 const path = require('path');
 
 // 导入路由
@@ -10,6 +14,7 @@ const userRoutes = require('./routes/userRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const pageRoutes = require('./routes/pageRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 // 导入并初始化文件上传
 const { initUpload } = require('./middleware/upload');
@@ -50,6 +55,10 @@ app.use(session({
     }
 }));
 
+// Passport中间件
+app.use(passport.initialize());
+app.use(passport.session());
+
 // 设置模板引擎
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -62,6 +71,7 @@ app.use('/', pageRoutes);           // 页面路由
 app.use('/api/users', userRoutes);  // 用户API路由
 app.use('/api/tasks', taskRoutes);  // 任务API路由
 app.use('/api/upload', uploadRoutes); // 文件上传API路由
+app.use('/auth', authRoutes);       // OAuth认证路由
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

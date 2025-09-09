@@ -8,6 +8,9 @@ class User {
         this.email = data.email;
         this.password = data.password;
         this.avatar = data.avatar;
+        this.github_id = data.github_id;
+        this.github_username = data.github_username;
+        this.provider = data.provider || 'local';
         this.created_at = data.created_at;
         this.updated_at = data.updated_at;
     }
@@ -15,20 +18,47 @@ class User {
     // 创建新用户
     static async create(userData) {
         try {
-            // 密码加密
-            const hashedPassword = await bcrypt.hash(userData.password, 10);
-            
             const newUserData = {
                 username: userData.username,
                 email: userData.email,
-                password: hashedPassword,
-                avatar: userData.avatar || '/uploads/default-avatar.png'
+                avatar: userData.avatar || '/uploads/default-avatar.png',
+                provider: userData.provider || 'local'
             };
 
-            const newUser = dbHelpers.createUser(newUserData);
+            // 只有本地用户才需要加密密码
+            if (userData.password && userData.provider !== 'github') {
+                newUserData.password = await bcrypt.hash(userData.password, 10);
+            }
+
+            // OAuth相关字段
+            if (userData.github_id) {
+                newUserData.github_id = userData.github_id;
+                newUserData.github_username = userData.github_username;
+                newUserData.provider = 'github';
+            }
+
+            const newUser = await dbHelpers.createUser(newUserData);
             return new User(newUser);
         } catch (error) {
             throw new Error('创建用户失败: ' + error.message);
+        }
+    }
+
+    // 创建GitHub用户
+    static async createFromGithub(githubProfile) {
+        try {
+            const userData = {
+                username: githubProfile.username || githubProfile.displayName,
+                email: githubProfile.emails && githubProfile.emails[0] ? githubProfile.emails[0].value : `${githubProfile.username}@github.local`,
+                avatar: githubProfile.photos && githubProfile.photos[0] ? githubProfile.photos[0].value : '/uploads/default-avatar.png',
+                github_id: githubProfile.id,
+                github_username: githubProfile.username,
+                provider: 'github'
+            };
+
+            return await User.create(userData);
+        } catch (error) {
+            throw new Error('创建GitHub用户失败: ' + error.message);
         }
     }
 
@@ -56,6 +86,16 @@ class User {
     static async findByEmail(email) {
         try {
             const userData = await dbHelpers.getUserByEmail(email);
+            return userData ? new User(userData) : null;
+        } catch (error) {
+            throw new Error('查找用户失败: ' + error.message);
+        }
+    }
+
+    // 根据GitHub ID查找用户
+    static async findByGithubId(githubId) {
+        try {
+            const userData = await dbHelpers.getUserByGithubId(githubId);
             return userData ? new User(userData) : null;
         } catch (error) {
             throw new Error('查找用户失败: ' + error.message);
@@ -106,6 +146,10 @@ class User {
     // 验证密码
     async validatePassword(password) {
         try {
+            // OAuth用户没有密码，无法验证
+            if (this.provider !== 'local' || !this.password) {
+                return false;
+            }
             return await bcrypt.compare(password, this.password);
         } catch (error) {
             throw new Error('密码验证失败: ' + error.message);

@@ -82,6 +82,17 @@
 
                         <hr class="my-4">
 
+                        <!-- 第三方登录 -->
+                        <div class="text-center mb-3">
+                            <p class="text-muted">或使用第三方账户登录</p>
+                            <a href="/auth/github" class="btn btn-dark btn-lg w-100 mb-2">
+                                <i class="bi bi-github"></i>
+                                使用 GitHub 登录
+                            </a>
+                        </div>
+
+                        <hr class="my-4">
+
                         <div class="text-center">
                             <p class="text-muted">还没有账户？</p>
                             <a href="/register" class="btn btn-outline-primary">
@@ -170,6 +181,30 @@
         // 页面加载时聚焦到用户名输入框
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('username').focus();
+            
+            // 检查URL参数中的错误信息
+            const urlParams = new URLSearchParams(window.location.search);
+            const error = urlParams.get('error');
+            
+            if (error) {
+                const errorAlert = document.getElementById('errorAlert');
+                const errorMessage = document.getElementById('errorMessage');
+                
+                let message = '登录失败';
+                switch(error) {
+                    case 'oauth_failed':
+                        message = 'GitHub登录失败，请重试';
+                        break;
+                    case 'callback_error':
+                        message = 'OAuth回调处理错误，请重试';
+                        break;
+                    default:
+                        message = '登录失败：' + error;
+                }
+                
+                errorMessage.textContent = message;
+                errorAlert.classList.remove('d-none');
+            }
         });
     </script>
 </body>

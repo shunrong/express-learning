@@ -27,8 +27,11 @@ const initDatabase = () => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
+            password TEXT,
             avatar TEXT DEFAULT '/uploads/default-avatar.png',
+            github_id TEXT,
+            github_username TEXT,
+            provider TEXT DEFAULT 'local',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -37,6 +40,16 @@ const initDatabase = () => {
             console.error('创建用户表错误:', err.message);
         } else {
             console.log('用户表创建成功');
+            // 为github_id创建唯一索引
+            db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id)', (err) => {
+                if (err && !err.message.includes('already exists')) {
+                    console.error('创建github_id索引错误:', err.message);
+                } else {
+                    console.log('github_id唯一索引确保成功');
+                }
+            });
+            // 检查并添加新字段（用于已存在的数据库升级）
+            upgradeUserTable();
         }
     });
 
@@ -68,6 +81,62 @@ const initDatabase = () => {
     }, 100); // 稍微延迟以确保表创建完成
 };
 
+// 数据库升级函数（用于已存在的数据库）
+const upgradeUserTable = () => {
+    // 检查是否需要添加OAuth字段
+    db.all("PRAGMA table_info(users)", (err, columns) => {
+        if (err) {
+            console.error('检查表结构错误:', err.message);
+            return;
+        }
+        
+        const columnNames = columns.map(col => col.name);
+        
+        // 添加缺失的OAuth字段
+        if (!columnNames.includes('github_id')) {
+            db.run('ALTER TABLE users ADD COLUMN github_id TEXT', (err) => {
+                if (err && !err.message.includes('duplicate column')) {
+                    console.error('添加github_id字段错误:', err.message);
+                } else {
+                    console.log('github_id字段添加成功');
+                    // 添加唯一索引
+                    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id)', (err) => {
+                        if (err) {
+                            console.error('创建github_id唯一索引错误:', err.message);
+                        } else {
+                            console.log('github_id唯一索引创建成功');
+                        }
+                    });
+                }
+            });
+        }
+        
+        if (!columnNames.includes('github_username')) {
+            db.run('ALTER TABLE users ADD COLUMN github_username TEXT', (err) => {
+                if (err && !err.message.includes('duplicate column')) {
+                    console.error('添加github_username字段错误:', err.message);
+                } else {
+                    console.log('github_username字段添加成功');
+                }
+            });
+        }
+        
+        if (!columnNames.includes('provider')) {
+            db.run('ALTER TABLE users ADD COLUMN provider TEXT DEFAULT "local"', (err) => {
+                if (err && !err.message.includes('duplicate column')) {
+                    console.error('添加provider字段错误:', err.message);
+                } else {
+                    console.log('provider字段添加成功');
+                    // 为现有用户设置默认provider
+                    db.run('UPDATE users SET provider = "local" WHERE provider IS NULL');
+                }
+            });
+        }
+        
+        console.log('用户表升级检查完成');
+    });
+};
+
 // 插入默认数据
 const insertDefaultData = () => {
     // 检查是否已有用户数据
@@ -82,9 +151,9 @@ const insertDefaultData = () => {
             const hashedPassword = bcrypt.hashSync('123456', 10);
             
             db.run(`
-                INSERT INTO users (username, email, password) 
-                VALUES (?, ?, ?)
-            `, ['admin', 'admin@example.com', hashedPassword], function(err) {
+                INSERT INTO users (username, email, password, provider) 
+                VALUES (?, ?, ?, ?)
+            `, ['admin', 'admin@example.com', hashedPassword, 'local'], function(err) {
                 if (err) {
                     console.error('插入默认用户错误:', err.message);
                 } else {
@@ -191,12 +260,45 @@ const dbHelpers = {
         );
     },
 
+    // 根据GitHub ID查找用户
+    getUserByGithubId: async (githubId) => {
+        return await dbHelpers.get(
+            'SELECT * FROM users WHERE github_id = ?',
+            [githubId]
+        );
+    },
+
     // 创建用户
     createUser: async (userData) => {
+        const fields = [];
+        const values = [];
+        const placeholders = [];
+        
+        // 动态构建插入字段
+        ['username', 'email', 'password', 'avatar', 'github_id', 'github_username', 'provider'].forEach(field => {
+            if (userData[field] !== undefined) {
+                fields.push(field);
+                values.push(userData[field]);
+                placeholders.push('?');
+            }
+        });
+        
+        // 设置默认值
+        if (!userData.avatar && !userData.github_id) {
+            fields.push('avatar');
+            values.push('/uploads/default-avatar.png');
+            placeholders.push('?');
+        }
+        
+        if (!userData.provider) {
+            fields.push('provider');
+            values.push('local');
+            placeholders.push('?');
+        }
+        
         const result = await dbHelpers.run(
-            `INSERT INTO users (username, email, password, avatar) 
-             VALUES (?, ?, ?, ?)`,
-            [userData.username, userData.email, userData.password, userData.avatar || '/uploads/default-avatar.png']
+            `INSERT INTO users (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`,
+            values
         );
         return await dbHelpers.getUserById(result.lastID);
     },
