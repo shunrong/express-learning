@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Express任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-check-square"></i>
+                任务管理系统
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">仪表盘</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks">我的任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks/new">创建任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">关于</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
+                            <%= currentUser.username %>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item active" href="/settings">
+                                <i class="bi bi-gear"></i> 设置
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()">
+                                <i class="bi bi-box-arrow-right"></i> 退出登录
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="container mt-4">
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="h2">
+                    <i class="bi bi-gear"></i> 账户设置
+                </h1>
+                <p class="text-muted">管理您的个人信息和偏好设置</p>
+            </div>
+        </div>
+
+        <!-- 错误信息显示 -->
+        <div id="alertContainer"></div>
+
+        <div class="row">
+            <div class="col-lg-3">
+                <!-- 设置菜单 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">设置菜单</h6>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="#profile" class="list-group-item list-group-item-action active" data-bs-toggle="tab">
+                            <i class="bi bi-person"></i> 个人资料
+                        </a>
+                        <a href="#security" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                            <i class="bi bi-shield-lock"></i> 安全设置
+                        </a>
+                        <a href="#avatar" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                            <i class="bi bi-image"></i> 头像设置
+                        </a>
+                        <a href="#preferences" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                            <i class="bi bi-sliders"></i> 偏好设置
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <div class="tab-content">
+                    <!-- 个人资料 -->
+                    <div class="tab-pane fade show active" id="profile">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-person"></i> 个人资料
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="profileForm" class="needs-validation" novalidate>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="username" class="form-label">用户名</label>
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       id="username" 
+                                                       name="username" 
+                                                       value="<%= currentUser.username %>" 
+                                                       required>
+                                                <div class="invalid-feedback">
+                                                    请输入用户名
+                                                </div>
+                                                <div class="form-text">
+                                                    用户名用于登录和显示
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="email" class="form-label">邮箱地址</label>
+                                                <input type="email" 
+                                                       class="form-control" 
+                                                       id="email" 
+                                                       name="email" 
+                                                       value="<%= currentUser.email %>" 
+                                                       required>
+                                                <div class="invalid-feedback">
+                                                    请输入有效的邮箱地址
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="created_at" class="form-label">注册时间</label>
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       value="<%= new Date(currentUser.created_at).toLocaleDateString('zh-CN') %>" 
+                                                       readonly>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="last_login" class="form-label">最后登录</label>
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       value="<%= currentUser.updated_at ? new Date(currentUser.updated_at).toLocaleDateString('zh-CN') : '从未登录' %>" 
+                                                       readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr>
+
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-check-circle"></i> 保存更改
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 安全设置 -->
+                    <div class="tab-pane fade" id="security">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-shield-lock"></i> 安全设置
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="passwordForm" class="needs-validation" novalidate>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="mb-3">
+                                                <label for="currentPassword" class="form-label">当前密码</label>
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="currentPassword" 
+                                                       name="currentPassword" 
+                                                       required>
+                                                <div class="invalid-feedback">
+                                                    请输入当前密码
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="newPassword" class="form-label">新密码</label>
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="newPassword" 
+                                                       name="newPassword" 
+                                                       minlength="6" 
+                                                       required>
+                                                <div class="invalid-feedback">
+                                                    密码至少需要6个字符
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="confirmPassword" class="form-label">确认新密码</label>
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="confirmPassword" 
+                                                       name="confirmPassword" 
+                                                       minlength="6" 
+                                                       required>
+                                                <div class="invalid-feedback">
+                                                    密码确认不匹配
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle"></i>
+                                        <strong>密码安全提示：</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>密码长度至少6个字符</li>
+                                            <li>建议包含大小写字母、数字和特殊字符</li>
+                                            <li>避免使用容易猜测的个人信息</li>
+                                        </ul>
+                                    </div>
+
+                                    <hr>
+
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="bi bi-shield-check"></i> 更新密码
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 头像设置 -->
+                    <div class="tab-pane fade" id="avatar">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-image"></i> 头像设置
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 text-center">
+                                        <div class="mb-3">
+                                            <img src="<%= currentUser.avatar || '/uploads/default-avatar.png' %>" 
+                                                 alt="用户头像" 
+                                                 class="img-thumbnail rounded-circle"
+                                                 style="width: 120px; height: 120px; object-fit: cover;"
+                                                 id="avatarPreview">
+                                        </div>
+                                        <small class="text-muted">当前头像</small>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <form id="avatarForm" enctype="multipart/form-data">
+                                            <div class="mb-3">
+                                                <label for="avatar" class="form-label">选择新头像</label>
+                                                <input type="file" 
+                                                       class="form-control" 
+                                                       id="avatar" 
+                                                       name="avatar" 
+                                                       accept="image/*">
+                                                <div class="form-text">
+                                                    支持JPG、PNG格式，文件大小不超过5MB
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="alert alert-info">
+                                                <i class="bi bi-info-circle"></i>
+                                                <strong>头像规范：</strong>
+                                                <ul class="mb-0 mt-2">
+                                                    <li>建议使用正方形图片，系统会自动裁剪为圆形</li>
+                                                    <li>图片尺寸建议200x200像素以上</li>
+                                                    <li>请确保图片内容符合社区规范</li>
+                                                </ul>
+                                            </div>
+
+                                            <hr>
+
+                                            <div class="d-flex justify-content-end">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="bi bi-upload"></i> 上传头像
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 偏好设置 -->
+                    <div class="tab-pane fade" id="preferences">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-sliders"></i> 偏好设置
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="preferencesForm">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">界面主题</label>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="theme" id="themeLight" value="light" checked>
+                                                    <label class="form-check-label" for="themeLight">
+                                                        <i class="bi bi-sun"></i> 明亮主题
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="theme" id="themeDark" value="dark">
+                                                    <label class="form-check-label" for="themeDark">
+                                                        <i class="bi bi-moon"></i> 深色主题
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="theme" id="themeAuto" value="auto">
+                                                    <label class="form-check-label" for="themeAuto">
+                                                        <i class="bi bi-circle-half"></i> 跟随系统
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="language" class="form-label">语言设置</label>
+                                                <select class="form-select" id="language" name="language">
+                                                    <option value="zh-CN" selected>简体中文</option>
+                                                    <option value="en-US">English</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="tasksPerPage" class="form-label">每页显示任务数</label>
+                                                <select class="form-select" id="tasksPerPage" name="tasksPerPage">
+                                                    <option value="10">10条</option>
+                                                    <option value="20" selected>20条</option>
+                                                    <option value="50">50条</option>
+                                                    <option value="100">100条</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="defaultPriority" class="form-label">默认任务优先级</label>
+                                                <select class="form-select" id="defaultPriority" name="defaultPriority">
+                                                    <option value="low">低优先级</option>
+                                                    <option value="medium" selected>中优先级</option>
+                                                    <option value="high">高优先级</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="emailNotifications" name="emailNotifications" checked>
+                                            <label class="form-check-label" for="emailNotifications">
+                                                <i class="bi bi-envelope"></i> 邮件通知
+                                            </label>
+                                            <div class="form-text">接收任务截止提醒和重要更新</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="autoSave" name="autoSave" checked>
+                                            <label class="form-check-label" for="autoSave">
+                                                <i class="bi bi-cloud-arrow-up"></i> 自动保存
+                                            </label>
+                                            <div class="form-text">编辑任务时自动保存草稿</div>
+                                        </div>
+                                    </div>
+
+                                    <hr>
+
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="bi bi-check-circle"></i> 保存偏好设置
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Express任务管理系统</h6>
+                    <p class="text-muted small">
+                        基于Node.js和Express框架构建的全栈任务管理应用
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted small">
+                        技术栈: Express.js, SQLite, EJS, Bootstrap
+                    </p>
+                    <p class="text-muted small">
+                        © 2024 Express学习项目
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义JavaScript -->
+    <script src="/js/app.js"></script>
+    
+    <script>
+        // 页面加载完成后初始化所有功能
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM已加载，开始初始化...');
+            
+            // 检查必要的元素
+            const profileForm = document.getElementById('profileForm');
+            const passwordForm = document.getElementById('passwordForm');
+            const avatarForm = document.getElementById('avatarForm');
+            const avatarInput = document.getElementById('avatar');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const preferencesForm = document.getElementById('preferencesForm');
+            
+            console.log('profileForm元素:', profileForm);
+            console.log('passwordForm元素:', passwordForm);
+            console.log('avatarForm元素:', avatarForm);
+            console.log('avatar输入框:', avatarInput);
+            
+            // 个人资料表单提交
+            if (profileForm) {
+                profileForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    if (!this.checkValidity()) {
+                        e.stopPropagation();
+                        this.classList.add('was-validated');
+                        return;
+                    }
+
+                    const formData = new FormData(this);
+                    const userData = {
+                        username: formData.get('username'),
+                        email: formData.get('email')
+                    };
+
+                    try {
+                        const response = await fetch('/api/users/profile', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify(userData)
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            Utils.showAlert('个人资料已更新', 'success', 3000);
+                        } else {
+                            Utils.showAlert('更新失败: ' + result.error, 'danger');
+                        }
+                    } catch (error) {
+                        console.error('更新个人资料错误:', error);
+                        Utils.showAlert('网络错误，请重试', 'danger');
+                    }
+                });
+            }
+
+            // 密码更改表单提交
+            if (passwordForm) {
+                passwordForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+                    
+                    if (newPassword !== confirmPassword) {
+                        document.getElementById('confirmPassword').setCustomValidity('密码确认不匹配');
+                        this.classList.add('was-validated');
+                        return;
+                    } else {
+                        document.getElementById('confirmPassword').setCustomValidity('');
+                    }
+                    
+                    if (!this.checkValidity()) {
+                        e.stopPropagation();
+                        this.classList.add('was-validated');
+                        return;
+                    }
+
+                    const formData = new FormData(this);
+                    const passwordData = {
+                        currentPassword: formData.get('currentPassword'),
+                        newPassword: formData.get('newPassword')
+                    };
+
+                    try {
+                        const response = await fetch('/api/users/password', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify(passwordData)
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            Utils.showAlert('密码已更新', 'success', 3000);
+                            this.reset();
+                        } else {
+                            Utils.showAlert('密码更新失败: ' + result.error, 'danger');
+                        }
+                    } catch (error) {
+                        console.error('更新密码错误:', error);
+                        Utils.showAlert('网络错误，请重试', 'danger');
+                    }
+                });
+            }
+
+            // 头像上传表单提交
+            if (avatarForm) {
+                avatarForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const fileInput = document.getElementById('avatar');
+                    console.log('文件输入框:', fileInput);
+                    console.log('文件列表:', fileInput ? fileInput.files : 'fileInput为null');
+                    
+                    if (!fileInput) {
+                        Utils.showAlert('找不到文件输入框', 'danger');
+                        return;
+                    }
+                    
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        Utils.showAlert('请选择头像文件', 'warning');
+                        return;
+                    }
+
+                    const file = fileInput.files[0];
+                    console.log('选择的文件:', file);
+                    
+                    // 验证文件类型
+                    if (!file.type.startsWith('image/')) {
+                        Utils.showAlert('请选择图片文件', 'warning');
+                        return;
+                    }
+                    
+                    // 验证文件大小（5MB）
+                    const maxSize = 5 * 1024 * 1024;
+                    if (file.size > maxSize) {
+                        Utils.showAlert('文件大小不能超过5MB', 'warning');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('avatar', file);
+
+                    try {
+                        Utils.showAlert('正在上传头像...', 'info', 1000);
+                        
+                        const response = await fetch('/api/upload/avatar', {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+                        console.log('上传结果:', result);
+
+                        if (result.success) {
+                            Utils.showAlert('头像上传成功', 'success', 3000);
+                            // 更新头像预览
+                            if (result.data && result.data.avatar) {
+                                document.getElementById('avatarPreview').src = result.data.avatar;
+                            }
+                            // 清空文件输入
+                            fileInput.value = '';
+                        } else {
+                            Utils.showAlert('头像上传失败: ' + (result.error || '未知错误'), 'danger');
+                        }
+                    } catch (error) {
+                        console.error('上传头像错误:', error);
+                        Utils.showAlert('网络错误，请重试', 'danger');
+                    }
+                });
+            }
+
+            // 偏好设置表单提交
+            if (preferencesForm) {
+                preferencesForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    Utils.showAlert('偏好设置已保存', 'success', 3000);
+                });
+            }
+
+            // 头像文件预览
+            if (avatarInput) {
+                avatarInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const avatarPreview = document.getElementById('avatarPreview');
+                            if (avatarPreview) {
+                                avatarPreview.src = e.target.result;
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            // 密码确认验证
+            if (confirmPasswordInput) {
+                confirmPasswordInput.addEventListener('input', function() {
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = this.value;
+                    
+                    if (newPassword !== confirmPassword) {
+                        this.setCustomValidity('密码确认不匹配');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+
+            // 设置表单验证
+            const forms = document.querySelectorAll('.needs-validation');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

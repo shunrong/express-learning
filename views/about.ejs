@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Express任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-check-square"></i>
+                任务管理系统
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">首页</a>
+                    </li>
+                    <% if (currentUser) { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">仪表盘</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tasks">我的任务</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tasks/new">创建任务</a>
+                        </li>
+                    <% } %>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/about">关于</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <% if (currentUser) { %>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle"></i>
+                                <%= currentUser.username %>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/settings">
+                                    <i class="bi bi-gear"></i> 设置
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="logout()">
+                                    <i class="bi bi-box-arrow-right"></i> 退出登录
+                                </a></li>
+                            </ul>
+                        </li>
+                    <% } else { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/login">登录</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/register">注册</a>
+                        </li>
+                    <% } %>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="container mt-4">
+        <!-- 页面头部 -->
+        <div class="text-center mb-5">
+            <div class="mb-4">
+                <i class="bi bi-check-square-fill text-primary" style="font-size: 4rem;"></i>
+            </div>
+            <h1 class="display-4 mb-3">Express任务管理系统</h1>
+            <p class="lead text-muted">
+                基于Node.js和Express框架构建的全栈任务管理应用
+            </p>
+        </div>
+
+        <div class="row">
+            <!-- 项目介绍 -->
+            <div class="col-lg-8 mx-auto mb-5">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="bi bi-info-circle"></i> 项目介绍
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            这是一个用于学习Node.js和Express框架开发的完整项目，展示了现代Web应用开发的核心技术和最佳实践。
+                            该系统提供了完整的任务管理功能，包括用户认证、任务CRUD操作、文件上传、数据可视化等特性。
+                        </p>
+                        
+                        <h5 class="mt-4 mb-3">
+                            <i class="bi bi-star"></i> 主要特性
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        用户注册、登录和认证
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        任务创建、编辑和删除
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        任务状态和优先级管理
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        数据统计和可视化
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        文件上传和头像管理
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        响应式界面设计
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        RESTful API设计
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check text-success"></i>
+                                        跨域资源共享(CORS)
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技术栈 -->
+        <div class="row mb-5">
+            <div class="col-lg-10 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="bi bi-stack"></i> 技术栈
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <!-- 后端技术 -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">
+                                    <i class="bi bi-server"></i> 后端技术
+                                </h5>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-code-square text-success" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">Node.js</h6>
+                                            <small class="text-muted">JavaScript运行时</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-lightning text-warning" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">Express.js</h6>
+                                            <small class="text-muted">Web应用框架</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-database text-info" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">SQLite</h6>
+                                            <small class="text-muted">嵌入式数据库</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-shield-check text-primary" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">bcryptjs</h6>
+                                            <small class="text-muted">密码加密</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 前端技术 -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">
+                                    <i class="bi bi-palette"></i> 前端技术
+                                </h5>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-filetype-html text-danger" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">EJS</h6>
+                                            <small class="text-muted">模板引擎</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-bootstrap text-purple" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">Bootstrap 5</h6>
+                                            <small class="text-muted">CSS框架</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-filetype-js text-warning" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">JavaScript</h6>
+                                            <small class="text-muted">前端交互</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 border rounded text-center">
+                                            <i class="bi bi-phone text-success" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2 mb-1">响应式设计</h6>
+                                            <small class="text-muted">移动友好</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 项目结构 -->
+        <div class="row mb-5">
+            <div class="col-lg-10 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="bi bi-folder-symlink"></i> 项目结构
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <pre class="text-muted small"><code>express-learning/
+├── app.js                 # 应用入口文件
+├── package.json           # 项目配置
+├── README.md              # 项目说明
+├── database/              # 数据库相关
+│   ├── db.js             # 数据库连接配置
+│   └── task_manager.db   # SQLite数据库文件
+├── models/                # 数据模型
+│   ├── User.js           # 用户模型
+│   └── Task.js           # 任务模型
+├── controllers/           # 控制器
+│   ├── userController.js # 用户控制器
+│   └── taskController.js # 任务控制器
+├── routes/                # 路由定义
+│   ├── pageRoutes.js     # 页面路由
+│   ├── userRoutes.js     # 用户API路由
+│   ├── taskRoutes.js     # 任务API路由
+│   └── uploadRoutes.js   # 文件上传路由</code></pre>
+                            </div>
+                            <div class="col-md-6">
+                                <pre class="text-muted small"><code>├── views/                 # EJS模板文件
+│   ├── layout.ejs        # 布局模板
+│   ├── index.ejs         # 首页
+│   ├── dashboard.ejs     # 仪表盘
+│   ├── tasks/            # 任务相关页面
+│   │   ├── list.ejs      # 任务列表
+│   │   ├── detail.ejs    # 任务详情
+│   │   └── form.ejs      # 任务表单
+│   ├── auth/             # 认证相关页面
+│   │   ├── login.ejs     # 登录页面
+│   │   └── register.ejs  # 注册页面
+│   ├── settings.ejs      # 设置页面
+│   ├── about.ejs         # 关于页面
+│   └── 404.ejs           # 404错误页面
+├── public/                # 静态资源
+│   ├── css/              # CSS样式文件
+│   ├── js/               # JavaScript文件
+│   └── uploads/          # 上传文件目录
+└── middleware/            # 中间件
+    └── upload.js         # 文件上传中间件</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API文档 -->
+        <div class="row mb-5">
+            <div class="col-lg-10 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="bi bi-code-slash"></i> API接口
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <!-- 用户相关API -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">用户管理API</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>方法</th>
+                                                <th>路径</th>
+                                                <th>说明</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge bg-success">POST</span></td>
+                                                <td>/api/users/register</td>
+                                                <td>用户注册</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-success">POST</span></td>
+                                                <td>/api/users/login</td>
+                                                <td>用户登录</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-info">GET</span></td>
+                                                <td>/api/users/profile</td>
+                                                <td>获取用户信息</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-warning">PUT</span></td>
+                                                <td>/api/users/profile</td>
+                                                <td>更新用户信息</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-success">POST</span></td>
+                                                <td>/api/users/logout</td>
+                                                <td>用户登出</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 任务相关API -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">任务管理API</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>方法</th>
+                                                <th>路径</th>
+                                                <th>说明</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge bg-info">GET</span></td>
+                                                <td>/api/tasks</td>
+                                                <td>获取任务列表</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-success">POST</span></td>
+                                                <td>/api/tasks</td>
+                                                <td>创建新任务</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-info">GET</span></td>
+                                                <td>/api/tasks/:id</td>
+                                                <td>获取任务详情</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-warning">PUT</span></td>
+                                                <td>/api/tasks/:id</td>
+                                                <td>更新任务</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-danger">DELETE</span></td>
+                                                <td>/api/tasks/:id</td>
+                                                <td>删除任务</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>API使用说明：</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>所有API均返回JSON格式数据</li>
+                                    <li>需要认证的接口需要在请求中包含有效的session</li>
+                                    <li>支持跨域请求(CORS)</li>
+                                    <li>详细API文档请参考 <code>API.md</code> 文件</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 学习资源 -->
+        <div class="row mb-5">
+            <div class="col-lg-10 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="bi bi-book"></i> 学习资源
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">核心技术文档</h5>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://nodejs.org/docs/" target="_blank" class="text-decoration-none">
+                                                Node.js官方文档
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://expressjs.com/" target="_blank" class="text-decoration-none">
+                                                Express.js官方网站
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://www.sqlite.org/docs.html" target="_blank" class="text-decoration-none">
+                                                SQLite文档
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://ejs.co/" target="_blank" class="text-decoration-none">
+                                                EJS模板引擎
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">扩展学习</h5>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://getbootstrap.com/" target="_blank" class="text-decoration-none">
+                                                Bootstrap框架
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://restfulapi.net/" target="_blank" class="text-decoration-none">
+                                                RESTful API设计
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS" target="_blank" class="text-decoration-none">
+                                                CORS跨域资源共享
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-link-45deg"></i>
+                                            <a href="https://www.npmjs.com/" target="_blank" class="text-decoration-none">
+                                                npm包管理器
+                                            </a>
+                                        </div>
+                                        <i class="bi bi-box-arrow-up-right text-muted"></i>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 开始使用 -->
+        <div class="text-center mb-5">
+            <div class="card bg-primary text-white">
+                <div class="card-body py-5">
+                    <h2 class="card-title">开始体验任务管理系统</h2>
+                    <p class="card-text">立即注册账户，开始管理您的任务和项目</p>
+                    <div class="mt-4">
+                        <% if (!currentUser) { %>
+                            <a href="/register" class="btn btn-light btn-lg me-3">
+                                <i class="bi bi-person-plus"></i> 立即注册
+                            </a>
+                            <a href="/login" class="btn btn-outline-light btn-lg">
+                                <i class="bi bi-box-arrow-in-right"></i> 立即登录
+                            </a>
+                        <% } else { %>
+                            <a href="/dashboard" class="btn btn-light btn-lg me-3">
+                                <i class="bi bi-speedometer2"></i> 进入仪表盘
+                            </a>
+                            <a href="/tasks/new" class="btn btn-outline-light btn-lg">
+                                <i class="bi bi-plus-circle"></i> 创建任务
+                            </a>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-light py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Express任务管理系统</h6>
+                    <p class="text-muted small">
+                        基于Node.js和Express框架构建的全栈任务管理应用
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted small">
+                        技术栈: Express.js, SQLite, EJS, Bootstrap
+                    </p>
+                    <p class="text-muted small">
+                        © 2024 Express学习项目
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义JavaScript -->
+    <% if (currentUser) { %>
+        <script src="/js/app.js"></script>
+    <% } %>
+</body>
+</html>

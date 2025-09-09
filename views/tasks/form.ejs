@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Express任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body data-is-edit="<%= isEdit ? 'true' : 'false' %>" data-task-id="<%= task ? task.id : '' %>">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-check-square"></i>
+                任务管理系统
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">仪表盘</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks">我的任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/tasks/new">创建任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">关于</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
+                            <%= currentUser.username %>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/settings">
+                                <i class="bi bi-gear"></i> 设置
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()">
+                                <i class="bi bi-box-arrow-right"></i> 退出登录
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="container mt-4">
+        <!-- 面包屑导航 -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">仪表盘</a></li>
+                <li class="breadcrumb-item"><a href="/tasks">任务列表</a></li>
+                <li class="breadcrumb-item active"><%= isEdit ? '编辑任务' : '创建任务' %></li>
+            </ol>
+        </nav>
+
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="h2">
+                    <% if (isEdit) { %>
+                        <i class="bi bi-pencil"></i> 编辑任务
+                    <% } else { %>
+                        <i class="bi bi-plus-circle"></i> 创建新任务
+                    <% } %>
+                </h1>
+                <p class="text-muted">
+                    <% if (isEdit) { %>
+                        修改任务信息和状态
+                    <% } else { %>
+                        添加新的任务到您的待办列表
+                    <% } %>
+                </p>
+            </div>
+            <div class="col-auto">
+                <a href="/tasks" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+
+        <!-- 错误信息显示 -->
+        <div id="alertContainer"></div>
+
+        <!-- 任务表单 -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <% if (isEdit) { %>
+                                <i class="bi bi-pencil"></i> 编辑任务信息
+                            <% } else { %>
+                                <i class="bi bi-file-text"></i> 任务详细信息
+                            <% } %>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="taskForm" class="needs-validation" novalidate>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">
+                                            <i class="bi bi-card-heading"></i> 任务标题 *
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="title" 
+                                               name="title" 
+                                               required 
+                                               maxlength="255"
+                                               placeholder="请输入任务标题..."
+                                               value="<%= task ? task.title : '' %>">
+                                        <div class="invalid-feedback">
+                                            请输入任务标题
+                                        </div>
+                                        <div class="form-text">
+                                            简洁明了地描述这个任务（最多255个字符）
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="priority" class="form-label">
+                                            <i class="bi bi-flag"></i> 优先级
+                                        </label>
+                                        <select class="form-select" id="priority" name="priority">
+                                            <option value="low" <%= task && task.priority === 'low' ? 'selected' : '' %>>
+                                                🔵 低优先级
+                                            </option>
+                                            <option value="medium" <%= task && task.priority === 'medium' ? 'selected' : (!task ? 'selected' : '') %>>
+                                                🟡 中优先级
+                                            </option>
+                                            <option value="high" <%= task && task.priority === 'high' ? 'selected' : '' %>>
+                                                🔴 高优先级
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="status" class="form-label">
+                                            <i class="bi bi-clock-history"></i> 任务状态
+                                        </label>
+                                        <select class="form-select" id="status" name="status">
+                                            <option value="pending" <%= task && task.status === 'pending' ? 'selected' : (!task ? 'selected' : '') %>>
+                                                📋 待开始
+                                            </option>
+                                            <option value="in_progress" <%= task && task.status === 'in_progress' ? 'selected' : '' %>>
+                                                ⏳ 进行中
+                                            </option>
+                                            <option value="completed" <%= task && task.status === 'completed' ? 'selected' : '' %>>
+                                                ✅ 已完成
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="due_date" class="form-label">
+                                            <i class="bi bi-calendar-date"></i> 截止日期
+                                        </label>
+                                        <input type="datetime-local" 
+                                               class="form-control" 
+                                               id="due_date" 
+                                               name="due_date"
+                                               value="<%= task && task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '' %>">
+                                        <div class="form-text">
+                                            选择任务的截止时间（可选）
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">
+                                    <i class="bi bi-card-text"></i> 任务描述
+                                </label>
+                                <textarea class="form-control" 
+                                          id="description" 
+                                          name="description" 
+                                          rows="4" 
+                                          placeholder="详细描述这个任务的内容、要求、注意事项等..."><%= task ? task.description || '' : '' %></textarea>
+                                <div class="form-text">
+                                    提供任务的详细信息，帮助您更好地理解和执行任务
+                                </div>
+                            </div>
+
+                            <!-- 提交按钮 -->
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <% if (isEdit) { %>
+                                        <button type="button" class="btn btn-danger" onclick="deleteTask()">
+                                            <i class="bi bi-trash"></i> 删除任务
+                                        </button>
+                                    <% } %>
+                                </div>
+                                <div>
+                                    <a href="/tasks" class="btn btn-secondary me-2">
+                                        <i class="bi bi-x-circle"></i> 取消
+                                    </a>
+                                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                                        <% if (isEdit) { %>
+                                            <i class="bi bi-check-circle"></i> 保存修改
+                                        <% } else { %>
+                                            <i class="bi bi-plus-circle"></i> 创建任务
+                                        <% } %>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 提示信息卡片 -->
+                <div class="card mt-4 bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-lightbulb"></i> 任务管理小贴士
+                        </h6>
+                        <ul class="small text-muted mb-0">
+                            <li>使用清晰简洁的标题来描述任务目标</li>
+                            <li>根据任务的重要性和紧急程度设置合适的优先级</li>
+                            <li>在描述中包含任务的具体要求和验收标准</li>
+                            <li>设置合理的截止日期有助于提高执行效率</li>
+                            <li>及时更新任务状态以跟踪进度</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Express任务管理系统</h6>
+                    <p class="text-muted small">
+                        基于Node.js和Express框架构建的全栈任务管理应用
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted small">
+                        技术栈: Express.js, SQLite, EJS, Bootstrap
+                    </p>
+                    <p class="text-muted small">
+                        © 2024 Express学习项目
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义JavaScript -->
+    <script src="/js/app.js"></script>
+    
+    <script>
+        // 从HTML数据属性中获取变量
+        const isEdit = document.body.dataset.isEdit === 'true';
+        const taskId = document.body.dataset.taskId ? parseInt(document.body.dataset.taskId) : null;
+
+        // 表单提交处理
+        document.getElementById('taskForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!this.checkValidity()) {
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            // 显示加载状态
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>处理中...';
+            submitBtn.disabled = true;
+
+            try {
+                const formData = new FormData(this);
+                const taskData = {
+                    title: formData.get('title'),
+                    description: formData.get('description'),
+                    status: formData.get('status'),
+                    priority: formData.get('priority'),
+                    due_date: formData.get('due_date') || null
+                };
+
+                const url = isEdit ? `/api/tasks/${taskId}` : '/api/tasks';
+                const method = isEdit ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(taskData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Utils.showAlert(
+                        isEdit ? '任务更新成功！' : '任务创建成功！', 
+                        'success', 
+                        2000
+                    );
+                    
+                    // 延迟跳转
+                    setTimeout(() => {
+                        if (isEdit) {
+                            window.location.href = `/tasks/${taskId}`;
+                        } else {
+                            window.location.href = '/tasks';
+                        }
+                    }, 1000);
+                } else {
+                    Utils.showAlert(
+                        '操作失败: ' + (result.errors ? result.errors.join(', ') : result.error), 
+                        'danger'
+                    );
+                }
+            } catch (error) {
+                console.error('提交错误:', error);
+                Utils.showAlert('网络错误，请重试', 'danger');
+            } finally {
+                // 恢复按钮状态
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // 删除任务
+        async function deleteTask() {
+            if (!taskId) return;
+
+            if (!confirm('确定要删除这个任务吗？此操作不可撤销。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Utils.showAlert('任务已删除', 'success', 2000);
+                    setTimeout(() => {
+                        window.location.href = '/tasks';
+                    }, 1000);
+                } else {
+                    Utils.showAlert('删除失败: ' + result.error, 'danger');
+                }
+            } catch (error) {
+                console.error('删除错误:', error);
+                Utils.showAlert('网络错误，请重试', 'danger');
+            }
+        }
+
+        // 页面加载完成后聚焦到标题输入框
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('title').focus();
+            
+            // 禁用表单的默认HTML5验证样式
+            const forms = document.querySelectorAll('.needs-validation');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                });
+            });
+        });
+
+        // 字符计数器
+        const titleInput = document.getElementById('title');
+        titleInput.addEventListener('input', function() {
+            const length = this.value.length;
+            const maxLength = this.getAttribute('maxlength');
+            
+            if (length > maxLength * 0.8) {
+                this.classList.add('text-warning');
+            } else {
+                this.classList.remove('text-warning');
+            }
+        });
+    </script>
+</body>
+</html>

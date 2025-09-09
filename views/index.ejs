@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Express任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-check-square"></i>
+                任务管理系统
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">首页</a>
+                    </li>
+                    <% if (currentUser) { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">仪表盘</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tasks">我的任务</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tasks/new">创建任务</a>
+                        </li>
+                    <% } %>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">关于</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <% if (currentUser) { %>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle"></i>
+                                <%= currentUser.username %>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/settings">
+                                    <i class="bi bi-gear"></i> 设置
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="logout()">
+                                    <i class="bi bi-box-arrow-right"></i> 退出登录
+                                </a></li>
+                            </ul>
+                        </li>
+                    <% } else { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/login">登录</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/register">注册</a>
+                        </li>
+                    <% } %>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="container mt-4">
+        <!-- 消息提示区域 -->
+        <div id="alertContainer"></div>
+        
+        <!-- 错误信息显示 -->
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle"></i>
+                <%= error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+<!-- 欢迎横幅 -->
+<div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+    <div class="container">
+        <h1 class="display-4">
+            <i class="bi bi-check-square"></i>
+            欢迎使用任务管理系统
+        </h1>
+        <p class="lead">
+            一个基于Express.js构建的现代化任务管理应用，帮助您高效组织和追踪日常任务。
+        </p>
+        <% if (!currentUser) { %>
+            <hr class="my-4" style="border-color: rgba(255,255,255,0.3);">
+            <p>开始使用我们的任务管理系统，提升您的工作效率。</p>
+            <div class="mt-3">
+                <a class="btn btn-light btn-lg me-3" href="/register" role="button">
+                    <i class="bi bi-person-plus"></i> 立即注册
+                </a>
+                <a class="btn btn-outline-light btn-lg" href="/login" role="button">
+                    <i class="bi bi-box-arrow-in-right"></i> 用户登录
+                </a>
+            </div>
+        <% } else { %>
+            <hr class="my-4" style="border-color: rgba(255,255,255,0.3);">
+            <p>欢迎回来，<strong><%= currentUser.username %></strong>！</p>
+            <div class="mt-3">
+                <a class="btn btn-light btn-lg me-3" href="/dashboard" role="button">
+                    <i class="bi bi-speedometer2"></i> 查看仪表盘
+                </a>
+                <a class="btn btn-outline-light btn-lg" href="/tasks/new" role="button">
+                    <i class="bi bi-plus-circle"></i> 创建新任务
+                </a>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 功能特性 -->
+    <div class="col-lg-8">
+        <h2>系统特性</h2>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-list-task text-primary"></i>
+                            任务管理
+                        </h5>
+                        <p class="card-text">
+                            创建、编辑、删除任务，设置优先级和截止日期，追踪任务进度。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-person-circle text-success"></i>
+                            用户系统
+                        </h5>
+                        <p class="card-text">
+                            安全的用户注册登录，个人资料管理，会话保持。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-search text-info"></i>
+                            搜索过滤
+                        </h5>
+                        <p class="card-text">
+                            强大的搜索功能，按状态、优先级、关键词过滤任务。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-cloud-upload text-warning"></i>
+                            文件上传
+                        </h5>
+                        <p class="card-text">
+                            支持头像上传，文件管理，静态资源服务。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="col-lg-4">
+        <% if (currentUser && stats) { %>
+            <!-- 任务统计 -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bar-chart"></i>
+                        任务统计
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h4 class="text-primary"><%= stats.total %></h4>
+                            <small class="text-muted">总任务</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 class="text-warning"><%= stats.in_progress %></h4>
+                            <small class="text-muted">进行中</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 class="text-success"><%= stats.completed %></h4>
+                            <small class="text-muted">已完成</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <span class="badge bg-danger"><%= stats.high_priority %></span>
+                            <small class="d-block text-muted">高优先级</small>
+                        </div>
+                        <div class="col-4">
+                            <span class="badge bg-warning"><%= stats.medium_priority %></span>
+                            <small class="d-block text-muted">中优先级</small>
+                        </div>
+                        <div class="col-4">
+                            <span class="badge bg-info"><%= stats.low_priority %></span>
+                            <small class="d-block text-muted">低优先级</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近任务 -->
+            <% if (recentTasks && recentTasks.length > 0) { %>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history"></i>
+                            最近任务
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <% recentTasks.slice(0, 5).forEach(task => { %>
+                                <a href="/tasks/<%= task.id %>" class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1"><%= task.title %></h6>
+                                            <% if (task.description) { %>
+                                                <p class="mb-1 text-muted small">
+                                                    <%= task.description.length > 50 ? task.description.substring(0, 50) + '...' : task.description %>
+                                                </p>
+                                            <% } %>
+                                        </div>
+                                        <div class="text-end">
+                                            <% if (task.status === 'completed') { %>
+                                                <span class="badge bg-success">已完成</span>
+                                            <% } else if (task.status === 'in_progress') { %>
+                                                <span class="badge bg-warning">进行中</span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary">待开始</span>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </a>
+                            <% }); %>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="/tasks" class="btn btn-sm btn-outline-primary">
+                                查看所有任务 <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
+        <% } else { %>
+            <!-- 技术栈信息 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-code-slash"></i>
+                        技术栈
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-server text-success"></i>
+                            <strong>后端:</strong> Node.js + Express.js
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-database text-primary"></i>
+                            <strong>数据库:</strong> SQLite
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-file-earmark-code text-warning"></i>
+                            <strong>模板:</strong> EJS
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-brush text-info"></i>
+                            <strong>样式:</strong> Bootstrap 5
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-shield-check text-danger"></i>
+                            <strong>认证:</strong> Express Session
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<!-- 学习指南 -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h3 class="card-title">
+                    <i class="bi bi-book"></i>
+                    Express学习指南
+                </h3>
+                <p class="card-text">
+                    这个项目演示了Express.js的核心概念和最佳实践：
+                </p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-arrow-right-circle"></i> 路由与控制器</h6>
+                        <ul class="small">
+                            <li>RESTful API设计</li>
+                            <li>页面路由管理</li>
+                            <li>中间件应用</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-arrow-right-circle"></i> 数据管理</h6>
+                        <ul class="small">
+                            <li>SQLite数据库操作</li>
+                            <li>模型层设计</li>
+                            <li>数据验证</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-arrow-right-circle"></i> 前端集成</h6>
+                        <ul class="small">
+                            <li>EJS模板渲染</li>
+                            <li>静态资源服务</li>
+                            <li>AJAX交互</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Express任务管理系统</h6>
+                    <p class="text-muted small">
+                        基于Node.js和Express框架构建的全栈任务管理应用
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted small">
+                        技术栈: Express.js, SQLite, EJS, Bootstrap
+                    </p>
+                    <p class="text-muted small">
+                        © 2024 Express学习项目
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义JavaScript -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

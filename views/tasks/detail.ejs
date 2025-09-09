@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Express任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body data-task-id="<%= task ? task.id : '' %>">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-check-square"></i>
+                任务管理系统
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">仪表盘</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks">我的任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks/new">创建任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">关于</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
+                            <%= currentUser.username %>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/settings">
+                                <i class="bi bi-gear"></i> 设置
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()">
+                                <i class="bi bi-box-arrow-right"></i> 退出登录
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="container mt-4">
+        <!-- 面包屑导航 -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">仪表盘</a></li>
+                <li class="breadcrumb-item"><a href="/tasks">任务列表</a></li>
+                <li class="breadcrumb-item active">任务详情</li>
+            </ol>
+        </nav>
+
+        <!-- 错误信息显示 -->
+        <div id="alertContainer"></div>
+
+        <% if (task) { %>
+        <!-- 任务头部信息 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h1 class="h3 mb-1 <%= task.status === 'completed' ? 'text-decoration-line-through text-muted' : '' %>">
+                            <%= task.title %>
+                        </h1>
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- 状态徽章 -->
+                            <div>
+                                <% if (task.status === 'completed') { %>
+                                    <span class="badge bg-success fs-6">
+                                        <i class="bi bi-check-circle"></i> 已完成
+                                    </span>
+                                <% } else if (task.status === 'in_progress') { %>
+                                    <span class="badge bg-warning fs-6">
+                                        <i class="bi bi-hourglass-split"></i> 进行中
+                                    </span>
+                                <% } else { %>
+                                    <span class="badge bg-secondary fs-6">
+                                        <i class="bi bi-clock"></i> 待开始
+                                    </span>
+                                <% } %>
+                            </div>
+                            
+                            <!-- 优先级徽章 -->
+                            <div>
+                                <% if (task.priority === 'high') { %>
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-flag-fill"></i> 高优先级
+                                    </span>
+                                <% } else if (task.priority === 'medium') { %>
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-flag"></i> 中优先级
+                                    </span>
+                                <% } else { %>
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-flag"></i> 低优先级
+                                    </span>
+                                <% } %>
+                            </div>
+                            
+                            <!-- 创建时间 -->
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-plus"></i>
+                                创建于 <%= new Date(task.created_at).toLocaleDateString('zh-CN', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }) %>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="btn-group">
+                            <a href="/tasks/<%= task.id %>/edit" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil"></i> 编辑
+                            </a>
+                            <button type="button" class="btn btn-outline-danger" onclick="deleteTask()">
+                                <i class="bi bi-trash"></i> 删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 主要内容 -->
+            <div class="col-lg-8">
+                <!-- 任务描述 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-card-text"></i> 任务描述
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <% if (task.description && task.description.trim()) { %>
+                            <div class="task-description">
+                                <%= task.description %>
+                            </div>
+                        <% } else { %>
+                            <div class="text-muted fst-italic">
+                                <i class="bi bi-info-circle"></i>
+                                暂无任务描述
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- 状态更新 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-arrow-repeat"></i> 更新状态
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label for="statusSelect" class="form-label">任务状态</label>
+                                <select class="form-select" id="statusSelect">
+                                    <option value="pending" <%= task.status === 'pending' ? 'selected' : '' %>>
+                                        📋 待开始
+                                    </option>
+                                    <option value="in_progress" <%= task.status === 'in_progress' ? 'selected' : '' %>>
+                                        ⏳ 进行中
+                                    </option>
+                                    <option value="completed" <%= task.status === 'completed' ? 'selected' : '' %>>
+                                        ✅ 已完成
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary" onclick="updateStatus()">
+                                    <i class="bi bi-check-circle"></i> 更新状态
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 导航按钮 -->
+                <div class="d-flex justify-content-between">
+                    <a href="/tasks" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> 返回列表
+                    </a>
+                    <div>
+                        <a href="/tasks/<%= task.id %>/edit" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> 编辑任务
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 侧边栏 -->
+            <div class="col-lg-4">
+                <!-- 任务信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-info-circle"></i> 任务信息
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- 任务ID -->
+                            <div class="col-12">
+                                <label class="form-label small text-muted">任务ID</label>
+                                <div class="fw-bold">#<%= task.id %></div>
+                            </div>
+                            
+                            <!-- 创建者 -->
+                            <div class="col-12">
+                                <label class="form-label small text-muted">创建者</label>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-circle me-2"></i>
+                                    <span><%= task.username || currentUser.username %></span>
+                                </div>
+                            </div>
+                            
+                            <!-- 截止日期 -->
+                            <div class="col-12">
+                                <label class="form-label small text-muted">截止日期</label>
+                                <div>
+                                    <% if (task.due_date) { %>
+                                        <% 
+                                        const dueDate = new Date(task.due_date);
+                                        const now = new Date();
+                                        const isOverdue = dueDate < now && task.status !== 'completed';
+                                        %>
+                                        <div class="<%= isOverdue ? 'text-danger' : '' %>">
+                                            <i class="bi bi-calendar-event"></i>
+                                            <%= dueDate.toLocaleDateString('zh-CN', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                            <% if (isOverdue) { %>
+                                                <br><small class="text-danger">
+                                                    <i class="bi bi-exclamation-triangle"></i> 已逾期
+                                                </small>
+                                            <% } %>
+                                        </div>
+                                    <% } else { %>
+                                        <span class="text-muted">
+                                            <i class="bi bi-calendar-x"></i> 未设置
+                                        </span>
+                                    <% } %>
+                                </div>
+                            </div>
+                            
+                            <!-- 最后更新 -->
+                            <div class="col-12">
+                                <label class="form-label small text-muted">最后更新</label>
+                                <div>
+                                    <i class="bi bi-clock-history"></i>
+                                    <%= new Date(task.updated_at).toLocaleDateString('zh-CN', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    }) %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-lightning"></i> 快速操作
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <% if (task.status !== 'in_progress') { %>
+                                <button type="button" class="btn btn-warning btn-sm" onclick="quickUpdateStatus('in_progress')">
+                                    <i class="bi bi-play-circle"></i> 开始执行
+                                </button>
+                            <% } %>
+                            
+                            <% if (task.status !== 'completed') { %>
+                                <button type="button" class="btn btn-success btn-sm" onclick="quickUpdateStatus('completed')">
+                                    <i class="bi bi-check-circle"></i> 标记完成
+                                </button>
+                            <% } %>
+                            
+                            <% if (task.status === 'completed') { %>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="quickUpdateStatus('in_progress')">
+                                    <i class="bi bi-arrow-counterclockwise"></i> 重新开始
+                                </button>
+                            <% } %>
+                            
+                            <hr>
+                            
+                            <a href="/tasks/<%= task.id %>/edit" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i> 编辑任务
+                            </a>
+                            
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteTask()">
+                                <i class="bi bi-trash"></i> 删除任务
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 创建新任务 -->
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="card-title">创建相关任务</h6>
+                        <p class="card-text small text-muted">
+                            基于当前任务创建新的相关任务
+                        </p>
+                        <a href="/tasks/new" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> 创建新任务
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } else { %>
+        <!-- 任务不存在 -->
+        <div class="text-center py-5">
+            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+            <h2 class="mt-3">任务不存在</h2>
+            <p class="text-muted">您要查看的任务不存在或已被删除</p>
+            <a href="/tasks" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> 返回任务列表
+            </a>
+        </div>
+        <% } %>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Express任务管理系统</h6>
+                    <p class="text-muted small">
+                        基于Node.js和Express框架构建的全栈任务管理应用
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted small">
+                        技术栈: Express.js, SQLite, EJS, Bootstrap
+                    </p>
+                    <p class="text-muted small">
+                        © 2024 Express学习项目
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义JavaScript -->
+    <script src="/js/app.js"></script>
+    
+    <script>
+        // 从HTML数据属性中获取变量
+        const taskId = document.body.dataset.taskId ? parseInt(document.body.dataset.taskId) : null;
+
+        // 更新任务状态
+        async function updateStatus() {
+            const statusSelect = document.getElementById('statusSelect');
+            const newStatus = statusSelect.value;
+            
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    Utils.showAlert('任务状态已更新', 'success', 3000);
+                    // 刷新页面以显示最新状态
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    Utils.showAlert('更新失败: ' + result.error, 'danger');
+                }
+            } catch (error) {
+                console.error('更新任务状态错误:', error);
+                Utils.showAlert('网络错误，请重试', 'danger');
+            }
+        }
+
+        // 快速更新状态
+        async function quickUpdateStatus(status) {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ status: status })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    let message = '';
+                    switch(status) {
+                        case 'in_progress':
+                            message = '任务已开始执行';
+                            break;
+                        case 'completed':
+                            message = '任务已标记为完成';
+                            break;
+                        case 'pending':
+                            message = '任务已重置为待开始';
+                            break;
+                    }
+                    Utils.showAlert(message, 'success', 3000);
+                    // 刷新页面以显示最新状态
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    Utils.showAlert('更新失败: ' + result.error, 'danger');
+                }
+            } catch (error) {
+                console.error('快速更新状态错误:', error);
+                Utils.showAlert('网络错误，请重试', 'danger');
+            }
+        }
+
+        // 删除任务
+        async function deleteTask() {
+            if (!confirm('确定要删除这个任务吗？此操作不可撤销。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    Utils.showAlert('任务已删除', 'success', 2000);
+                    setTimeout(() => {
+                        window.location.href = '/tasks';
+                    }, 1000);
+                } else {
+                    Utils.showAlert('删除失败: ' + result.error, 'danger');
+                }
+            } catch (error) {
+                console.error('删除任务错误:', error);
+                Utils.showAlert('网络错误，请重试', 'danger');
+            }
+        }
+
+        // 页面加载时的处理
+        document.addEventListener('DOMContentLoaded', function() {
+            // 格式化任务描述中的换行符
+            const descriptionElement = document.querySelector('.task-description');
+            if (descriptionElement) {
+                const text = descriptionElement.textContent;
+                descriptionElement.innerHTML = text.replace(/\n/g, '<br>');
+            }
+        });
+    </script>
+</body>
+</html>
